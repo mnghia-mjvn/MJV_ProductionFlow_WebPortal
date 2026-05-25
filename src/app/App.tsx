@@ -96,6 +96,7 @@ type Screen =
   | "qc-form-list"
   | "qc-form-builder"
   | "pe-dashboard"
+  | "pe-job-management"
   | "pe-job-detail";
 
 type TaskStatus =
@@ -1138,7 +1139,7 @@ function Sidebar({ account, screen, onNavigate, onLogout }: SidebarProps) {
               </div>
             )}
             <NavItem icon={<LayoutDashboard size={16} />} label={role === "admin" ? "PE Dashboard" : "Dashboard"} active={screen === "pe-dashboard"} onClick={() => onNavigate("pe-dashboard")} />
-            <NavItem icon={<Briefcase size={16} />} label="Jobs" active={screen === "pe-job-detail"} onClick={() => onNavigate("pe-dashboard")} />
+            <NavItem icon={<Briefcase size={16} />} label="Jobs" active={screen === "pe-job-management"} onClick={() => onNavigate("pe-job-management")} />
           </>
         )}
 
@@ -2273,6 +2274,165 @@ function PEDashboard({ jobs, onSelectJob, onCreateJob }: PEDashboardProps) {
                             <Pencil size={14} />
                           </button>
                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PEJobManagement({ jobs, onSelectJob, onCreateJob }: { jobs: Job[]; onSelectJob: (job: Job) => void; onCreateJob: () => void }) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | JobStatus>("all");
+  const [priorityFilter, setPriorityFilter] = useState<"all" | Priority>("all");
+
+  const filteredJobs = jobs.filter((j) => {
+    const query = search.toLowerCase();
+    const matchesSearch =
+      search === "" ||
+      j.jobNo.toLowerCase().includes(query) ||
+      j.productName.toLowerCase().includes(query) ||
+      j.projectNo.toLowerCase().includes(query) ||
+      j.assignedWorker.toLowerCase().includes(query) ||
+      j.description.toLowerCase().includes(query);
+    const matchesStatus = statusFilter === "all" || j.status === statusFilter;
+    const matchesPriority = priorityFilter === "all" || j.priority === priorityFilter;
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
+
+  return (
+    <div className="flex-1 overflow-auto">
+      <TopBar title="Job Management" subtitle="Review, assign, and track project jobs" />
+      <div className="px-7 py-6 space-y-6">
+        <div className="bg-white rounded-xl border border-border overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.16em] font-semibold text-muted-foreground">Project Engineer</p>
+              <h2 className="text-xl font-bold text-foreground">Job Management</h2>
+            </div>
+            <button
+              onClick={onCreateJob}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+            >
+              <Plus size={16} /> New Job
+            </button>
+          </div>
+
+          <div className="px-5 py-4 border-b border-border flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search job, product, worker..."
+                  className="pl-9 pr-4 py-2 text-sm border border-border rounded-lg bg-muted/40 focus:outline-none focus:border-blue-400 w-64"
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as "all" | JobStatus)}
+                className="text-sm border border-border rounded-lg px-3 py-2 bg-muted/40 focus:outline-none focus:border-blue-400 text-foreground"
+              >
+                <option value="all">All Statuses</option>
+                <option value="unassigned">Unassigned</option>
+                <option value="assigned">Assigned</option>
+                <option value="in-progress">In Progress</option>
+                <option value="awaiting-qc">Awaiting QC</option>
+                <option value="done">Done</option>
+              </select>
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value as "all" | Priority)}
+                className="text-sm border border-border rounded-lg px-3 py-2 bg-muted/40 focus:outline-none focus:border-blue-400 text-foreground"
+              >
+                <option value="all">All Priorities</option>
+                <option value="urgent">Urgent</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <p className="text-xs text-muted-foreground">{filteredJobs.length} job(s) found</p>
+          </div>
+
+          {filteredJobs.length === 0 ? (
+            <div className="py-16 text-center text-muted-foreground">
+              <Briefcase size={32} className="mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-medium">No jobs match your current search or filters.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-muted/40">
+                    <th className="py-2.5 px-4 text-left text-xs font-semibold text-muted-foreground">Job No.</th>
+                    <th className="py-2.5 px-4 text-left text-xs font-semibold text-muted-foreground">Description</th>
+                    <th className="py-2.5 px-4 text-left text-xs font-semibold text-muted-foreground">Workshop</th>
+                    <th className="py-2.5 px-4 text-left text-xs font-semibold text-muted-foreground">Assigned To</th>
+                    <th className="py-2.5 px-4 text-left text-xs font-semibold text-muted-foreground">Priority</th>
+                    <th className="py-2.5 px-4 text-left text-xs font-semibold text-muted-foreground">Status</th>
+                    <th className="py-2.5 px-4 text-left text-xs font-semibold text-muted-foreground">Due Date</th>
+                    <th className="py-2.5 px-4" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredJobs.map((job) => (
+                    <tr
+                      key={job.id}
+                      onClick={() => onSelectJob(job)}
+                      className="border-b border-border last:border-0 hover:bg-blue-50/40 cursor-pointer transition-colors"
+                    >
+                      <td className="py-3 px-4">
+                        <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{job.jobNo}</span>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{job.projectNo}</p>
+                      </td>
+                      <td className="py-3 px-4 max-w-xs">
+                        <p className="text-sm font-semibold text-foreground line-clamp-1">{job.productName}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{job.description}</p>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
+                          {workshopIcon(job.workshop)}
+                          {job.workshop}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        {job.assignedWorker ? (
+                          <div>
+                            <p className="text-sm text-foreground">{job.assignedWorker}</p>
+                            <p className="text-xs text-muted-foreground">QC: {job.assignedQC || "—"}</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">Not assigned</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <PriorityBadge priority={job.priority} />
+                      </td>
+                      <td className="py-3 px-4">
+                        <JobStatusBadge status={job.status} />
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <CalendarDays size={12} />
+                          {job.dueDate}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onSelectJob(job); }}
+                          className="p-1.5 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil size={14} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -3943,10 +4103,13 @@ export default function App() {
         {screen === "pe-dashboard" && (
           <PEDashboard jobs={jobs} onSelectJob={handleSelectJob} onCreateJob={handleCreateJob} />
         )}
+        {screen === "pe-job-management" && (
+          <PEJobManagement jobs={jobs} onSelectJob={handleSelectJob} onCreateJob={handleCreateJob} />
+        )}
         {screen === "pe-job-detail" && (
           <PEJobDetail
             job={isNewJob ? null : selectedJob}
-            onBack={() => setScreen("pe-dashboard")}
+            onBack={() => setScreen("pe-job-management")}
             onSave={handleSaveJob}
             onDelete={handleDeleteJob}
           />
